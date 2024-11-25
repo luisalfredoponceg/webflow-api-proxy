@@ -1,7 +1,9 @@
 // Function to proxy requests to Webflow API
 export default async function handler(req, res) {
-    // Configurar CORS para tu dominio de Webflow
-    res.setHeader('Access-Control-Allow-Origin', 'https://menta-test-web.webflow.io');
+    console.log('🔄 Proxy request received');
+
+    // Configurar CORS
+    res.setHeader('Access-Control-Allow-Origin', '*'); // Temporalmente permitimos todos los orígenes
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
@@ -14,11 +16,11 @@ export default async function handler(req, res) {
     const WEBFLOW_API_TOKEN = process.env.WEBFLOW_API_TOKEN;
     const COLLECTION_ID = process.env.COLLECTION_ID;
 
-    try {
-        // Log para debugging
-        console.log('Fetching from Webflow API...');
-        console.log('Collection ID:', COLLECTION_ID);
+    console.log('📝 Using Collection ID:', COLLECTION_ID);
 
+    try {
+        console.log('🚀 Making request to Webflow API...');
+        
         const response = await fetch(
             `https://api.webflow.com/collections/${COLLECTION_ID}/items`, 
             {
@@ -29,14 +31,28 @@ export default async function handler(req, res) {
             }
         );
 
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('🔴 Webflow API Error:', {
+                status: response.status,
+                statusText: response.statusText,
+                error: errorText
+            });
+            throw new Error(`Webflow API call failed: ${response.status}`);
+        }
+
         const data = await response.json();
-        
-        // Log para debugging
-        console.log(`Fetched ${data.items?.length || 0} items`);
+        console.log('✅ Webflow API response received:', {
+            total: data.total,
+            count: data.items?.length || 0
+        });
         
         res.status(200).json(data);
     } catch (error) {
-        console.error('Error fetching from Webflow:', error);
-        res.status(500).json({ error: 'Failed to fetch from Webflow API' });
+        console.error('💥 Error in proxy:', error);
+        res.status(500).json({ 
+            error: 'Failed to fetch from Webflow API',
+            details: error.message
+        });
     }
 }
