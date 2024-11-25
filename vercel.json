@@ -1,8 +1,8 @@
 {
   "version": 2,
   "env": {
-    "WEBFLOW_API_TOKEN": "@webflow_api_token",
-    "COLLECTION_ID": "@collection_id"
+    "WEBFLOW_API_TOKEN": "${WEBFLOW_API_TOKEN}",
+    "COLLECTION_ID": "${COLLECTION_ID}"
   },
   "routes": [
     {
