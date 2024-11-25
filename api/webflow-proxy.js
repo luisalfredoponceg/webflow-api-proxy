@@ -10,44 +10,39 @@ export default async function handler(req, res) {
         return;
     }
 
-    // Obtener valores directamente (sin template literals)
-    const token = '1a0ea66abda8d10be13e7b9bb074fbd5bbefd6ea0114856361cf1bebb1662469';
-    const collectionId = '673f152e98cb1a6ed5e1f1ca';
+    // Using site ID instead of collection ID
+    const SITE_ID = '64864b182dab4d8c36699250';
+    const COLLECTION_ID = '673f152e98cb1a6ed5e1f1ca';
     
     try {
-        // Construir URL directamente
-        const apiUrl = 'https://api.webflow.com/collections/' + collectionId + '/items';
+        // Using the public API endpoint
+        const apiUrl = `https://${SITE_ID}.webflow.io/api/v1/collection/${COLLECTION_ID}/items?limit=1000`;
         console.log('🚀 Making request to:', apiUrl);
 
-        const headers = {
-            'accept-version': '1.0.0',
-            'Authorization': 'Bearer ' + token,
-            'Content-Type': 'application/json'
-        };
-
-        console.log('Request headers:', {
-            'accept-version': headers['accept-version'],
-            'Content-Type': headers['Content-Type'],
-            'Authorization': 'Bearer [hidden]'
-        });
-
-        const response = await fetch(apiUrl, { 
+        const response = await fetch(apiUrl, {
             method: 'GET',
-            headers: headers
+            headers: {
+                'Content-Type': 'application/json'
+            }
         });
 
         console.log('Response status:', response.status);
         const responseText = await response.text();
-        console.log('Response text preview:', responseText.substring(0, 200));
-
+        
         if (!response.ok) {
+            console.error('Response error:', responseText);
             throw new Error(`API call failed: ${response.status} - ${responseText}`);
         }
 
-        const data = JSON.parse(responseText);
-        console.log('✅ Success! Items count:', data.items?.length || 0);
+        try {
+            const data = JSON.parse(responseText);
+            console.log('✅ Success! Items count:', data.items?.length || 0);
+            return res.status(200).json(data);
+        } catch (parseError) {
+            console.error('Parse error:', parseError);
+            throw new Error(`Failed to parse response: ${responseText}`);
+        }
 
-        return res.status(200).json(data);
     } catch (error) {
         console.error('💥 Error in proxy:', error.message);
         return res.status(500).json({
