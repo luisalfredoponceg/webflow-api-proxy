@@ -10,44 +10,66 @@ export default async function handler(req, res) {
         return;
     }
 
-    // Using site ID instead of collection ID
-    const SITE_ID = '64864b182dab4d8c36699250';
     const COLLECTION_ID = '673f152e98cb1a6ed5e1f1ca';
-    
-    try {
-        // Using the public API endpoint
-        const apiUrl = `https://${SITE_ID}.webflow.io/api/v1/collection/${COLLECTION_ID}/items?limit=1000`;
-        console.log('🚀 Making request to:', apiUrl);
+    const API_TOKEN = '1a0ea66abda8d10be13e7b9bb074fbd5bbefd6ea0114856361cf1bebb1662469';
 
-        const response = await fetch(apiUrl, {
+    try {
+        console.log('Starting request process...');
+
+        // First, let's test if we can access the collection info
+        const testUrl = `https://api.webflow.com/collections/${COLLECTION_ID}`;
+        console.log('Testing collection access:', testUrl);
+
+        const testResponse = await fetch(testUrl, {
             method: 'GET',
             headers: {
+                'accept-version': '1.0.0',
+                'Authorization': `Bearer ${API_TOKEN}`,
                 'Content-Type': 'application/json'
             }
         });
 
-        console.log('Response status:', response.status);
-        const responseText = await response.text();
-        
-        if (!response.ok) {
-            console.error('Response error:', responseText);
-            throw new Error(`API call failed: ${response.status} - ${responseText}`);
-        }
+        console.log('Test response status:', testResponse.status);
+        const testText = await testResponse.text();
+        console.log('Test response:', testText);
 
-        try {
-            const data = JSON.parse(responseText);
-            console.log('✅ Success! Items count:', data.items?.length || 0);
-            return res.status(200).json(data);
-        } catch (parseError) {
-            console.error('Parse error:', parseError);
-            throw new Error(`Failed to parse response: ${responseText}`);
+        // If we can access the collection, try to get items
+        if (testResponse.ok) {
+            const itemsUrl = `https://api.webflow.com/collections/${COLLECTION_ID}/items?limit=100`;
+            console.log('Fetching items:', itemsUrl);
+
+            const itemsResponse = await fetch(itemsUrl, {
+                method: 'GET',
+                headers: {
+                    'accept-version': '1.0.0',
+                    'Authorization': `Bearer ${API_TOKEN}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const itemsText = await itemsResponse.text();
+            console.log('Items response status:', itemsResponse.status);
+            console.log('Items response preview:', itemsText.substring(0, 200));
+
+            if (itemsResponse.ok) {
+                const data = JSON.parse(itemsText);
+                return res.status(200).json(data);
+            } else {
+                throw new Error(`Items request failed: ${itemsResponse.status} - ${itemsText}`);
+            }
+        } else {
+            throw new Error(`Collection access failed: ${testResponse.status} - ${testText}`);
         }
 
     } catch (error) {
-        console.error('💥 Error in proxy:', error.message);
+        console.error('Error in proxy:', error);
         return res.status(500).json({
             error: 'Failed to fetch from Webflow API',
             details: error.message,
+            debug: {
+                message: error.toString(),
+                stack: error.stack
+            },
             timestamp: new Date().toISOString()
         });
     }
