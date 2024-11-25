@@ -1,51 +1,40 @@
 export default async function handler(req, res) {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  // Validar que sea POST
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
 
-    if (req.method === 'OPTIONS') {
-        res.status(200).end();
-        return;
+  // Leer los datos enviados desde el frontend
+  const { collectionId } = req.body;
+
+  if (!collectionId) {
+    return res.status(400).json({ error: "Collection ID is required" });
+  }
+
+  // Token de Webflow
+  const webflowToken = "eae7d6695df7e062e72e2b4d37c6b8ebb51439146e5b48c63c373693ec5dd5a3";
+
+  try {
+    // Hacer la solicitud a la API de Webflow
+    const response = await fetch(`https://api.webflow.com/collections/${collectionId}/items`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${webflowToken}`,
+        "Content-Type": "application/json",
+        "accept-version": "1.0.0",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error fetching data: ${response.statusText}`);
     }
 
-    const COLLECTION_ID = '673f152e98cb1a6ed5e1f1ca';
-    const API_TOKEN = '1a0ea66abda8d10be13e7b9bb074fbd5bbefd6ea0114856361cf1bebb1662469';
-    const BASE_URL = `https://api.webflow.com/collections/${COLLECTION_ID}/items`;
-    const MAX_LIMIT = 100; // Límite de Webflow
+    const data = await response.json();
 
-    try {
-        const allItems = [];
-        let offset = 0;
-        let moreItemsAvailable = true;
-
-        while (moreItemsAvailable) {
-            const response = await fetch(`${BASE_URL}?limit=${MAX_LIMIT}&offset=${offset}`, {
-                method: 'GET',
-                headers: {
-                    'accept-version': '1.0.0',
-                    'Authorization': `Bearer ${API_TOKEN}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error(`Error fetching data: ${response.statusText}`);
-            }
-
-            const data = await response.json();
-            allItems.push(...data.items);
-
-            if (data.items.length < MAX_LIMIT) {
-                moreItemsAvailable = false;
-            } else {
-                offset += MAX_LIMIT;
-            }
-        }
-
-        console.log(`Fetched ${allItems.length} items in total`);
-        res.status(200).json({ items: allItems });
-    } catch (error) {
-        console.error('Error fetching items:', error);
-        res.status(500).json({ error: error.message });
-    }
+    // Responder con los datos obtenidos de Webflow
+    res.status(200).json(data);
+  } catch (error) {
+    // Manejar errores
+    res.status(500).json({ error: `Error fetching data: ${error.message}` });
+  }
 }
